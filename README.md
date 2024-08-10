@@ -1,84 +1,137 @@
-# Overview
+# Assignment 1
 
-To gain an understanding of how a distributed system works, this first assignment phase involves developing a simple Java RMI application. This will involve developing both the client and server side of a distributed application: a simple calculator server.
+## Student
 
-The calculator server operates a stack and clients push values and operations on to the stack. While, usually, each client should have its own stack, you may use a single stack on the server. You may also assume that operations are always sensible: that is, we will only push an operator after pushing at least on value and we will only pop when there is a value on the stack. You may also assume that the operator provided will only be one of the four displayed types and that the values are always integers.
+- Name: Minh Duc Tong (John)
+- ID: a1941699
 
-Following the directions discussed in lectures, you should create a Java RMI Server that supports the following remote methods:
+### Overview
 
-`void pushValue(int val);`
+This project is developed by using Java RMI system to simulate a calculator server. I developed this system to allow the clients have their **OWN STACK**. This project allows user to manage their own stack with these methods like the requirements:
 
-This method will take val and push it on to the top of the stack.
+- pushValue
+- pushOperation (min, max, lcm, gcd)
+- Pop
+- delayPop
 
-`void pushOperation(String operator);`
+To achieve the requirement that each client accesses their own stack, I used the **Factory design pattern** in Java. Whenever the client connects to the server, each client receives its own unique `CalculatorImplementation` instance which maintains its own separate stack. Clients can perform operations independently without interfering with each other.
 
-This method will push a String containing an operator ("min", "max", "lcm", "gcd") to the stack, which will cause the server to pop all the values on the stack and:
+### Project structure
 
-    for min - push the min value of all the popped values;
-    for max - push the max value of all the popped values
-    for lcm - push the least common multiple of all the popped values;
-    for gcd - push the greatest common divisor of all the popped values.
+#### Calculator.java
 
-`int pop();`
+Interface defining the calculator operations
 
-This method will pop the top of the stack and return it to the client.
+#### CalculatorImplementation.java
 
-`boolean isEmpty();` 
+Function implementation:
 
-This method will return true if the stack is empty, false otherwise.
+- void pushValue(int val): used to push value onto the stack
+- void pushOperation(String operator): used to pop all value and push the result from operator (min, max, lcm, gcd)
+- int pop(): pop value from stack
+- boolean isEmpty(): check stack is empty or not
+- int delayPop(int millis): pop value after millis delayed
+- String displayStack(): print the stack in terminal (used for improving UX)
+- Calculator createCalculator(): create a new instance for operation, it will allow clients will have their own stack
 
-`int delayPop(int millis);` 
+#### CalculatorFactory.java
 
-This method will wait millis milliseconds before carrying out the pop operation as above.
+Interface and implementation for the Calculator factory. Each client will create an instance from this to have their own stack.
 
+#### CalculatorServer.java
 
-Importantly: Your implementation should use the following files:
+Server that using the RMI registry
 
-```
-Calculator.java - the interface that defines the remote operations implemented by your remote service.
-CalculatorImplementation.java - the implementation class for the remote operations.
-CalculatorServer.java - the server class.
-CalculatorClient.java - a test client that should connect to the server, and test its operation.
-You will need to create and add these files to your repository.
-```
+#### CalculatorClient.java
 
-Don't forget to commit your work frequently and to submit before the due date!
-Assessment
+Client for interacting with the calculator
 
-Your assignment will be marked out of 100 points, as following:
-
-    50 points for the functionality of your code:
-
-o All clients access the same stack on the server
-o pushValue works – one client, many clients (more than 3)
-o pushOperation works – one client, many clients (more than 3)
-o pop works – one client, many clients (more than 3)
-o delayPop works – one client, many clients (more than 3)
-
-    35 points for the quality of your automated testing, both in testing the server with single and multiple clients.
-    15 points for the quality of your code:
-
-Code Quality Checklist 
-
-Do!
+When the client connects to server, the program will show a list of actions that client can select.
 
 ```
-o write comments above the header of each of your methods, describing
-o what the method is doing, what are its inputs and expected outputs
-o describe in the comments any special cases
-o create modular code, following cohesion and coupling principles
+Choose an action:
+1. Push Value
+2. Push Operation
+3. Pop
+4. Delay Pop
+5. Display current stack
+6. Quit
+Enter your choice (1-5): 1
+Enter value to push: 12
+Current stack: [12]
 ```
 
-Don’t!
+#### Prerequisites
+
+Java Development Kit (JDK): JDK 8 or higher (I tested with CAT Suite machine successfully)
+
+#### Run server and client
+
+1. Start RMI Registry:
 
 ```
-o use magic numbers
-o use comments as structural elements (see video)
-o mis-spell your comments
-o use incomprehensible variable names
-o have long methods (not more than 80 lines)
-o allow TODO blocks 
+rmiregistry &
 ```
-Bonus marks (extra 10 points)
 
-    Clients have their own stack on the server: each client accesses their own stack, rather than the common one
+2. Build file:
+
+```
+javac -d . Calculator.java CalculatorImplementation.java CalculatorClient.java CalculatorServer.java
+```
+
+3. Run server:
+
+```
+java -classpath . -Djava.rmi.server.codebase=file:./ CalculatorServer
+```
+
+4. Run client:
+
+```
+java  -classpath . CalculatorClient
+```
+
+#### CalculatorTest.java
+
+JUnit test cases for the calculator
+
+My test result:
+
+```
+Thanks for using JUnit! Support its development at https://junit.org/sponsoring
+
+╷
+├─ JUnit Jupiter ✔
+│  └─ CalculatorTest ✔
+│     ├─ testMultipleClients() ✔
+│     ├─ testGCD() ✔
+│     ├─ testLCM() ✔
+│     ├─ testMax() ✔
+│     ├─ testMin() ✔
+│     ├─ testPop() ✔
+│     ├─ testLCMWithLongStack() ✔
+│     ├─ testPushValue() ✔
+│     ├─ testWrongOperatorAction() ✔
+│     ├─ testDelayPop() ✔
+│     ├─ testGCDWithLongStack() ✔
+│     └─ testNegativeNumbers() ✔
+└─ JUnit Vintage ✔
+
+Test run finished after 3079 ms
+[         3 containers found      ]
+[         0 containers skipped    ]
+[         3 containers started    ]
+[         0 containers aborted    ]
+[         3 containers successful ]
+[         0 containers failed     ]
+[        12 tests found           ]
+[         0 tests skipped         ]
+[        12 tests started         ]
+[         0 tests aborted         ]
+[        12 tests successful      ]
+[         0 tests failed          ]
+```
+
+#### junit-platform-console-standalone-1.8.2.jar
+
+JUnit library for running tests

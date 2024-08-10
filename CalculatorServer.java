@@ -1,21 +1,18 @@
 import java.rmi.registry.Registry;
+import java.rmi.server.RemoteServer;
 import java.rmi.registry.LocateRegistry;
 
 public class CalculatorServer {
     public static void main(String args[]) {
+        String host = (args.length < 1) ? null : args[0];
         try {
-            // Create an instance of the implementation
-            CalculatorImplementation obj = new CalculatorImplementation();
-            
-            // Create or get the registry
-            Registry registry = LocateRegistry.createRegistry(2002);
-            
-            // Bind the implementation instance to a name in the registry
-            registry.rebind("Calculator", obj);
+            Registry registry = LocateRegistry.getRegistry(host);
+            CalculatorFactory factory = new CalculatorFactoryImplementation();
+            registry.rebind("CalculatorFactory", factory);
             
             System.out.println("Calculator Server is ready");
         } catch (Exception e) {
-            System.err.println("Server exception: " + e.toString());
+            System.err.println(e.toString());
             e.printStackTrace();
         }
     }
