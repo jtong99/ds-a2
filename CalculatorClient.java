@@ -81,7 +81,7 @@ public class CalculatorClient {
                         scanner.close();
                         return;
                     default:
-                        System.out.println("Invalid! Select from 1-5.");
+                        System.out.println("Invalid! Select from 1-6");
                 }
             }
         } catch (Exception e) {

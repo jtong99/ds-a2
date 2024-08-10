@@ -16,56 +16,37 @@ This project is developed by using Java RMI system to simulate a calculator serv
 
 To achieve the requirement that each client accesses their own stack, I used the **Factory design pattern** in Java. Whenever the client connects to the server, each client receives its own unique `CalculatorImplementation` instance which maintains its own separate stack. Clients can perform operations independently without interfering with each other.
 
-### Project structure
-
-#### Calculator.java
-
-Interface defining the calculator operations
-
-#### CalculatorImplementation.java
-
-Function implementation:
-
-- void pushValue(int val): used to push value onto the stack
-- void pushOperation(String operator): used to pop all value and push the result from operator (min, max, lcm, gcd)
-- int pop(): pop value from stack
-- boolean isEmpty(): check stack is empty or not
-- int delayPop(int millis): pop value after millis delayed
-- String displayStack(): print the stack in terminal (used for improving UX)
-- Calculator createCalculator(): create a new instance for operation, it will allow clients will have their own stack
-
-#### CalculatorFactory.java
-
-Interface and implementation for the Calculator factory. Each client will create an instance from this to have their own stack.
-
-#### CalculatorServer.java
-
-Server that using the RMI registry
-
-#### CalculatorClient.java
-
-Client for interacting with the calculator
-
-When the client connects to server, the program will show a list of actions that client can select.
-
-```
-Choose an action:
-1. Push Value
-2. Push Operation
-3. Pop
-4. Delay Pop
-5. Display current stack
-6. Quit
-Enter your choice (1-5): 1
-Enter value to push: 12
-Current stack: [12]
-```
-
 #### Prerequisites
 
 Java Development Kit (JDK): JDK 8 or higher (I tested with CAT Suite machine successfully)
 
-#### Run server and client
+#### Run server and client using Makefile
+
+1. Build code
+
+```
+make
+```
+
+2. Start registry
+
+```
+make registry
+```
+
+3. Start server
+
+```
+make server
+```
+
+4. Start client
+
+```
+make client
+```
+
+#### Run server and client without Makefile
 
 1. Start RMI Registry:
 
@@ -91,7 +72,52 @@ java -classpath . -Djava.rmi.server.codebase=file:./ CalculatorServer
 java  -classpath . CalculatorClient
 ```
 
-#### CalculatorTest.java
+### Project structure
+
+#### 1. Calculator.java
+
+Interface defining the calculator operations
+
+#### 2. CalculatorImplementation.java
+
+Function implementation:
+
+- void pushValue(int val): used to push value onto the stack
+- void pushOperation(String operator): used to pop all value and push the result from operator (min, max, lcm, gcd)
+- int pop(): pop value from stack
+- boolean isEmpty(): check stack is empty or not
+- int delayPop(int millis): pop value after millis delayed
+- String displayStack(): print the stack in terminal (used for improving UX)
+- Calculator createCalculator(): create a new instance for operation, it will allow clients will have their own stack
+
+#### 3. CalculatorFactory.java
+
+Interface and implementation for the Calculator factory. Each client will create an instance from this to have their own stack.
+
+#### 4. CalculatorServer.java
+
+Server that using the RMI registry
+
+#### 5. CalculatorClient.java
+
+Client for interacting with the calculator
+
+When the client connects to server, the program will show a list of actions that client can select.
+
+```
+Choose an action:
+1. Push Value
+2. Push Operation
+3. Pop
+4. Delay Pop
+5. Display current stack
+6. Quit
+Enter your choice (1-5): 1
+Enter value to push: 12
+Current stack: [12]
+```
+
+#### 6. CalculatorTest.java
 
 JUnit test cases for the calculator
 

@@ -1,9 +1,14 @@
+# build code
+build:
+	javac -d . Calculator.java CalculatorImplementation.java CalculatorClient.java CalculatorServer.java CalculatorFactory.java
+
+# Clean up compiled files
+clean:
+	rm -f *.class
+
 # Run RMI registry
 registry:
 	rmiregistry &
-
-# build:
-# 	javac -d . Calculator.java CalculatorImplementation.java CalculatorClient.java CalculatorServer.java CalculatorFactory.java
 
 # Run the server
 server: $(CLASSES)
