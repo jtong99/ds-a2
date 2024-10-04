@@ -14,6 +14,12 @@ public class ContentServer {
         this.clock = new Lamport();
     }
 
+    /**
+     * Attempts to load weather data from a specified file.
+     * Converts the file content to JSON format.
+     * @param filePath The path to the file containing weather data.
+     * @return true if file loading and conversion succeed, false otherwise.
+     */
     public boolean isLoadFileSuccess(String filePath) {
         try {
             String fileContent = JsonHandling.read(filePath);
@@ -25,11 +31,16 @@ public class ContentServer {
         }
     }
 
-    public void uploadData() {
-        
+    /**
+     * Uploads weather data to the aggregation server.
+     * Implements retry logic and Lamport clock synchronization.
+     * @param serverName The hostname of the aggregation server.
+     * @param portNumber The port number of the aggregation server.
+     */
+    public void uploadData(String serverName, int portNumber) {
         try {
             System.out.println("Upload data: ");
-            int lamportClockServer = this.socketServer.initializeSocketandGetLamport("localhost", 4000);
+            int lamportClockServer = this.socketServer.initializeSocketandGetLamport(serverName, portNumber);
             System.out.println("lamport data: ");
             this.clock.adjust(lamportClockServer);
             System.out.println("Updated Lamport clock 1: " + this.clock.getTime());
@@ -41,7 +52,7 @@ public class ContentServer {
                             "Source: " + this.source + "\r\n" +
                             "\r\n" +
                             dataString;
-            String res = this.socketServer.sendAndReceiveData("localhost", 4000, putRequest, true);
+            String res = this.socketServer.requestAndGetData(serverName, portNumber, putRequest, true);
             System.out.println("Response data: ");
             System.out.println(res);
             if (res != null) {
@@ -74,10 +85,34 @@ public class ContentServer {
                 }
             }
         } catch (Exception e) {
-            System.out.println(e);
-            System.out.println("Error while connecting to the server: " + e.getMessage());
-            System.out.println("Retry in 15 second.");
+            System.out.println("Retrying request to server...");
+            retryUpload(serverName, portNumber);
+        } 
+    }
+
+    /**
+     * Implements retry logic for uploading data to the server.
+     * Waits for a specified time before attempting to upload again.
+     * @param serverName The hostname of the aggregation server.
+     * @param portNumber The port number of the aggregation server.
+     */
+    public void retryUpload(String serverName, int portNumber) {
+        try {
+            Thread.sleep(5000);
+            uploadData(serverName, portNumber);
+        } catch (InterruptedException e) {
+            System.out.println("Retry error: " + e.getMessage());
         }
+    }
+
+    /**
+     * Gracefully shuts down the ContentServer.
+     * Closes the associated socket connection.
+     */
+    public void shutdown() {
+        System.out.println("Shutting down ContentServer...");
+        this.socketServer.close();
+        System.out.println("ContentServer shutdown complete.");
     }
 
     public static void main(String[] args) {
@@ -88,7 +123,7 @@ public class ContentServer {
             System.out.println("No port provided");
             return;
         }
-
+        String serverName = args[0];
         String file = args[2];
 
         SocketServer socketHandler = new SocketServer();
@@ -98,7 +133,7 @@ public class ContentServer {
             System.out.println("Error: Failed to load data from " + file);
             return;
         }
-        server.uploadData();
+        server.uploadData(serverName, port);
 
         Thread monitorThread = new Thread(() -> {
             Scanner scanner = new Scanner(System.in);

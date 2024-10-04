@@ -10,6 +10,11 @@ public class SocketServer {
     private PrintWriter outLog;
     private BufferedReader inLog;
 
+    /**
+     * Starts the server on the specified port.
+     * Used by AggregationServer and MainAggregationServer to initialize their listening sockets.
+     * @param port The port number to start the server on.
+     */
     public void start(int port) {
         this.close();
         try {
@@ -18,6 +23,11 @@ public class SocketServer {
             e.printStackTrace();
         }
     }
+
+    /**
+     * Closes the server socket.
+     * Called during shutdown procedures in various classes to ensure proper resource cleanup.
+     */
     public void close() {
         try {
             if (this.server != null) this.server.close();
@@ -26,6 +36,13 @@ public class SocketServer {
         }
     }
 
+
+    /**
+     * Accepts a client connection with a timeout.
+     * Used by MainAggregationServer to handle incoming client connections.
+     * @return A Socket object representing the client connection, or null if timeout occurs.
+     * @throws IOException If an I/O error occurs.
+     */
     public Socket accept() throws IOException {
         if (this.server == null || this.server.isClosed()) {
             throw new IllegalStateException("Server closed");
@@ -49,6 +66,13 @@ public class SocketServer {
         }
     }
 
+    /**
+     * Initializes a client socket connection and retrieves the Lamport clock value from the server.
+     * Used by ContentServer and Client to establish a connection with the AggregationServer.
+     * @param serverName The server's hostname.
+     * @param portNumber The server's port number.
+     * @return The Lamport clock value received from the server.
+     */
     public int initializeSocketandGetLamport(String serverName, int portNumber) {
         this.close();
         try {
@@ -59,9 +83,6 @@ public class SocketServer {
             this.inLog = new BufferedReader(new InputStreamReader(client.getInputStream()));
             
             String res = this.inLog.readLine();
-            System.out.println("connecting socket");
-            System.out.println("response");
-            System.out.println(res);
             if (res == null) {
                 throw new IOException("Server closed the connection unexpectedly.");
             }
@@ -76,16 +97,26 @@ public class SocketServer {
                 case "Lamport":
                     return Integer.parseInt(responseValue);
                 default:
-                    throw new IOException("Expected LamportClock value from server but received: " + res);
+                    throw new IOException("Cannot get lamport, error: " + res);
             }
         } catch (IOException | RuntimeException e) {
-            e.printStackTrace();
+            // e.printStackTrace();
             this.close(); 
             throw new RuntimeException("Error socket", e);
         }
     }
 
-    public String sendAndReceiveData(String serverName, int portNumber, String data, boolean isContentServer) {
+    /**
+     * Sends a request to the server and returns the response.
+     * Used by ContentServer for PUT requests and Client for GET requests.
+     * @param serverName The server's hostname.
+     * @param portNumber The server's port number.
+     * @param data The request data to send.
+     * @param isContentServer Boolean flag to differentiate between ContentServer and Client behavior.
+     * @return The server's response as a String.
+     */
+
+    public String requestAndGetData(String serverName, int portNumber, String data, boolean isContentServer) {
         try {
             this.outLog.println(data);
             StringBuilder responseBuilder = new StringBuilder();
@@ -93,7 +124,6 @@ public class SocketServer {
             int contentLength = 0;
             boolean isHeader = true;
             
-            // Read headers
             while (isHeader && (line = this.inLog.readLine()) != null) {
                 if (line.startsWith("Content-Length: ")) {
                     contentLength = Integer.parseInt(line.split(":")[1].trim());
@@ -101,13 +131,11 @@ public class SocketServer {
 
                 responseBuilder.append(line).append("\r\n");
 
-                // Blank line indicates end of headers and start of body
                 if (line.isEmpty()) {
                     isHeader = false;
                 }
             }
 
-            // Read body
             if (!isContentServer && contentLength > 0) {
                 char[] bodyChars = new char[contentLength];
                 this.inLog.read(bodyChars, 0, contentLength);
@@ -123,6 +151,12 @@ public class SocketServer {
         }
     }
 
+    /**
+     * Reads the entire request from a client socket.
+     * Used by AggregationServer to process incoming requests from clients and content servers.
+     * @param clientSocket The client's socket connection.
+     * @return The complete request as a String.
+     */
     public String request(Socket clientSocket) {
         StringBuilder requestBuilder = new StringBuilder();
 
@@ -133,7 +167,6 @@ public class SocketServer {
             String line;
             int contentLength = 0;
             boolean isHeader = true;
-            // Read headers
             while (isHeader && (line = in.readLine()) != null) {
                 if (line.startsWith("Content-Length: ")) {
                     contentLength = Integer.parseInt(line.split(":")[1].trim());
@@ -143,14 +176,13 @@ public class SocketServer {
                     isHeader = false;
                 }
             }
-            // Read body
             if (contentLength > 0) {
                 char[] bodyChars = new char[contentLength];
                 int bytesRead = 0;
                 while (bytesRead < contentLength) {
                     int result = in.read(bodyChars, bytesRead, contentLength - bytesRead);
                     if (result == -1) {
-                        break; // end of stream reached
+                        break;
                     }
                     bytesRead += result;
                 }
@@ -165,13 +197,26 @@ public class SocketServer {
         }
     }
 
+    /**
+     * Initializes the server socket on a specified port.
+     * This method seems redundant with the start() method and may not be used in the current implementation.
+     * @param name The server name (unused parameter).
+     * @param port The port number to start the server on.
+     * @return Always returns 0.
+     */
     public int init(String name, int port) {
         this.close();
         this.start(port);
         return 0;
     }
 
-    public void response(String response, Socket clientSocket) { // Modified
+    /**
+     * Sends a response to the client.
+     * Used by AggregationServer to send responses back to clients and content servers.
+     * @param response The response string to send.
+     * @param clientSocket The client's socket connection.
+     */
+    public void response(String response, Socket clientSocket) {
         try {
             this.outLog = new PrintWriter(clientSocket.getOutputStream(), true);
             this.outLog.println(response);

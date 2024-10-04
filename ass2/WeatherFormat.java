@@ -1,6 +1,6 @@
 import com.google.gson.JsonObject;
 
-public class WeatherFormat {
+public class WeatherFormat implements Comparable<WeatherFormat> {
     private int lamport;
     private String source;
     private JsonObject data;
@@ -11,5 +11,17 @@ public class WeatherFormat {
         this.data = data;
     }
 
-    
+    public int getLamport() {
+        return this.lamport;
+    }
+    public JsonObject getData() {
+        return this.data;
+    }
+    @Override
+    public int compareTo(WeatherFormat other) {
+        return Integer.compare(this.lamport, other.lamport);
+    }
+    public String getSource() {
+        return this.source;
+    }
 }
