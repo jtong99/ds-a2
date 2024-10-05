@@ -49,6 +49,7 @@ public class TestIntegration_Test {
 
     @BeforeEach
     public void setUpServer() {
+        System.out.println("Running TestIntegration_Test");
         suppressOutput();
         SocketServer socketServer = new SocketServer();
         this.servers = new ArrayList<>();
@@ -62,7 +63,7 @@ public class TestIntegration_Test {
             new Thread(() -> {
                 aggregationServer.start(serverPort);
                 try {
-                    Thread.sleep(200);  // Sleep for 200 milliseconds after starting
+                    Thread.sleep(200);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -87,6 +88,7 @@ public class TestIntegration_Test {
     public void shutDown() {
         this.mainAggregationServer.shutdown();
         this.servers.forEach(AggregationServer::stop);
+        this.servers.forEach(AggregationServer::clearData);
 
         contentServer1.shutdown();
         contentServer2.shutdown();
@@ -285,22 +287,22 @@ public class TestIntegration_Test {
     @Test
     public void testDataExpirationAfter30Seconds() throws InterruptedException {
         // Upload data
-        assertTrue(this.contentServer1.isLoadFileSuccess("data1_0.txt"));
+        assertTrue(this.contentServer1.isLoadFileSuccess("data2_0.txt"));
         this.contentServer1.uploadData("localhost", 4567);
 
         // Wait for a short time to ensure data is processed
         Thread.sleep(1000);
 
         // Verify data was uploaded successfully
-        JsonObject initialResponse = this.client1.sendRequest("localhost", 4567, "IDS60901");
+        JsonObject initialResponse = this.client1.sendRequest("localhost", 4567, "IDS60902");
         assertNotNull(initialResponse);
-        assertEquals("IDS60901", initialResponse.get("id").getAsString());
+        assertEquals("IDS60902", initialResponse.get("id").getAsString());
 
         // Wait for 31 seconds (slightly more than the 30-second expiration time)
         Thread.sleep(35000);
 
         // Check if data has been deleted
-        JsonObject afterExpirationResponse = this.client1.sendRequest("localhost", 4567, "IDS60901");
+        JsonObject afterExpirationResponse = this.client1.sendRequest("localhost", 4567, "IDS60902");
         assertNull(afterExpirationResponse, "Data should have been deleted after 30 seconds of inactivity");
     }
 }

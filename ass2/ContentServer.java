@@ -7,6 +7,7 @@ public class ContentServer {
     private SocketServer socketServer;
     private String source;
     private JsonObject data;
+    private boolean isClosed;
 
     public ContentServer(SocketServer socket) {
         this.source = UUID.randomUUID().toString();
@@ -46,7 +47,7 @@ public class ContentServer {
             System.out.println("Updated Lamport clock 1: " + this.clock.getTime());
             String dataString = JsonHandling.prettier(this.data);
             
-            String putRequest = "PUT /weather.json HTTP/1.1\r\n" +
+            String putRequest = "PUT /data.json HTTP/1.1\r\n" +
                             "Content-Length: " + dataString.length() + "\r\n" +
                             "LamportClock: " + this.clock.getTime() + "\r\n" +
                             "Source: " + this.source + "\r\n" +
@@ -106,13 +107,30 @@ public class ContentServer {
     }
 
     /**
+     * Get weather data
+     * @return weather data
+     */
+    public JsonObject getWeatherData() {
+        return this.data;
+    }
+
+    /**
      * Gracefully shuts down the ContentServer.
      * Closes the associated socket connection.
      */
     public void shutdown() {
         System.out.println("Shutting down ContentServer...");
         this.socketServer.close();
+        this.isClosed = true;
         System.out.println("ContentServer shutdown complete.");
+    }
+
+    /**
+     * get status of server
+     * @return status of server
+     */
+    public boolean isShutDown(){
+        return this.isClosed;
     }
 
     public static void main(String[] args) {

@@ -14,7 +14,7 @@ import com.google.gson.reflect.TypeToken;
 import java.lang.reflect.Type;
 
 public class DatabaseManagement {
-    private static final long EXPIRE_SAVE = 29000;
+    private static final long EXPIRE_SAVE = 30000;
 
     private static final String MAIN_DATA = "data" + File.separator + "data.json";
     private static final String MAIN_DATA_BACKUP = "data" + File.separator + "data_backup.json";
@@ -36,7 +36,7 @@ public class DatabaseManagement {
             throw new RuntimeException("use get db method");
         }
         this.loadData();
-        updateDataSchedule.scheduleAtFixedRate(this::updateData, 0, 15, TimeUnit.SECONDS);
+        updateDataSchedule.scheduleAtFixedRate(this::updateData, 0, 5, TimeUnit.SECONDS);
     }
 
     public static DatabaseManagement initialize() {

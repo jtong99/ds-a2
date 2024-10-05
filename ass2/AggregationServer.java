@@ -1,6 +1,9 @@
 import java.io.*;
 import com.google.gson.*;
 import java.net.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -23,6 +26,8 @@ public class AggregationServer {
         this.reqQueue = new LinkedBlockingQueue<>();
     }
 
+   
+
     /**
      * Checks if the server is currently running and accessible.
      * @return true if the server is up and responding, false otherwise.
@@ -30,6 +35,7 @@ public class AggregationServer {
     public boolean isUp() {
         try {
             Socket ping = new Socket();
+            System.out.println("ping to server: " + this.port);
             ping.connect(new InetSocketAddress("localhost", this.port), 1000); // 1 second timeout
             ping.close();
             return true;
@@ -92,7 +98,7 @@ public class AggregationServer {
      * Processes the request and sends an appropriate response.
      * @param clientSocket The client socket to handle.
      */
-    private void handleData(Socket clientSocket) {
+    public void handleData(Socket clientSocket) {
         try {
             String req = this.socketServer.request(clientSocket);
             System.out.println(req);
@@ -294,6 +300,13 @@ public class AggregationServer {
         this.isDown = true;
         this.socketServer.close();
         System.out.println("Stop AggregationServer on port " + this.port);
+    }
+
+    /**
+     * clear data for testing
+     */
+    public void clearData(){
+        db.clear();
     }
 
     public static void main(String[] args) {

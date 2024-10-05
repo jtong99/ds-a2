@@ -28,7 +28,7 @@ public class GETClient {
             try {
                 int getLamportServer = server.initializeSocketandGetLamport(serverName, port);
                 this.clock.adjust(getLamportServer);
-                String getRequest = "GET /weather.json HTTP/1.1\r\n" +
+                String getRequest = "GET /data.json HTTP/1.1\r\n" +
                                     "LamportClock: " + this.clock.getTime() + "\r\n" +
                                     "Source: " + this.clientId + "\r\n" +
                                     (stationID != null ? "StationID: " + stationID + "\r\n" : "") +
