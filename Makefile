@@ -1,19 +1,30 @@
-# build code
-build:
-	javac -d . Calculator.java CalculatorImplementation.java CalculatorClient.java CalculatorServer.java CalculatorFactory.java
+JAVA = java
+JAVAC = javac
+LIB = lib
+SRC = .
+OUT = .
+CP = $(LIB)/*:$(OUT)/
+MAIN_SOURCES = $(wildcard *.java)
+TEST_SOURCES = $(wildcard *_Test.java)
+AGGREGATION_SERVER = AggregationServer
+CONTENT_SERVER = ContentServer
+CLIENT = GETClient
+MAIN_SERVER = MainAggregationServer
+MAIN = Main
 
-# Clean up compiled files
-clean:
-	rm -f *.class
+all: compile-all
 
-# Run RMI registry
-registry:
-	rmiregistry &
+compile-all:
+	@$(JAVAC) -cp $(CP) $(MAIN_SOURCES) $(TEST_SOURCES)
 
-# Run the server
-server: $(CLASSES)
-	java -classpath . -Djava.rmi.server.codebase=file:./ CalculatorServer
+main: all
+	@$(JAVA) -cp $(CP) $(MAIN_SERVER)
 
-# Run the client
-client: $(CLASSES)
-	java  -classpath . CalculatorClient
+contentserver: all
+	@$(JAVA) -cp $(CP) $(CONTENT_SERVER) localhost 4567 $(SRC)/data1_1.txt
+
+client: all
+	@$(JAVA) -cp $(CP) $(CLIENT) http://localhost:4567 IDS60901
+
+test: all
+	@$(JAVA) -cp $(CP) org.junit.platform.console.ConsoleLauncher --scan-classpath

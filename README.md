@@ -1,163 +1,208 @@
-# Assignment 1
+# Assignment 2
 
 ## Student
 
 - Name: Minh Duc Tong (John)
 - ID: a1941699
 
-### Overview
+## Overview
 
-This project is developed by using Java RMI system to simulate a calculator server. I developed this system to allow the clients have their **OWN STACK**. This project allows user to manage their own stack with these methods like the requirements:
+This project implements socket distributed weather data system consisting of multiple components that work together to collect, aggregate, and serve weather information. The system is designed to be fault-tolerant, maintain data consistency using Lamport clocks, and provide a RESTful API for data access.
 
-- pushValue
-- pushOperation (min, max, lcm, gcd)
-- Pop
-- delayPop
+## Files
 
-To achieve the requirement that each client accesses their own stack, I used the **Factory design pattern** in Java. Whenever the client connects to the server, each client receives its own unique `CalculatorImplementation` instance which maintains its own separate stack. Clients can perform operations independently without interfering with each other.
+1. MainAggregationServer.java: Acts as a load balancer and coordinator for multiple AggregationServers. Currently, I implemented 3 aggregation servers that will handle fault-tolerant, if 1 server is down, the MainAggregationServer will automatically switch the other one.
+2. AggregationServer.java: Handles client requests, processes weather data, and manages data persistence.
+3. ContentServer.java: Read weather data from text file and uploads weather data to the AggregationServer.
+4. GETClient.java: Send requests to retrieve weather data from the AggregationServer.
+5. DatabaseManagement.java: Manages data persistence and handles data expiration.
+6. SocketServer.java: Custom implementation for socket-based communication
+7. Lamport.java: Lamport logical clock that will be used for aggregation server, content server and GETClient.
+8. JsonHandling.java: Utility class for JSON operations
 
-#### Prerequisites
+## Data management
 
-Java Development Kit (JDK): JDK 8 or higher (I tested with CAT Suite machine successfully)
+The system manages two primary types of data: weather data and sender data.
 
-#### Run server and client using Makefile
+### Weather data `data/data.json`
 
-1. Build code
-
-```
-make
-```
-
-2. Start registry
-
-```
-make registry
-```
-
-3. Start server
+- Weather data will be stored in `data.json`.
+- Ensures that weather data survives server restarts or crashes.
+- Allows the system to recover its state after unexpected shutdowns.
+- Serves as a backup of the system's data.
 
 ```
-make server
+{
+  "IDS60901": [
+    {
+      "lamport": 1,
+      "source": "e4e4323f-45b7-46d9-8472-e9e348d35b8d",
+      "data": {
+        "id": "IDS60901",
+        "name": "Adelaide (West Terrace /  ngayirdapira)",
+        "state": "SA",
+        "time_zone": "CST",
+        "lat": "40",
+        "lon": "138.6",
+        "local_date_time": "15/04:00pm",
+        "local_date_time_full": "20230715160000",
+        "air_temp": "13.3",
+        "apparent_t": "9.5",
+        "cloud": "Partly cloudy",
+        "dewpt": "5.7",
+        "press": "1023.9",
+        "rel_hum": "60",
+        "wind_dir": "S",
+        "wind_spd_kmh": "15",
+        "wind_spd_kt": "8"
+      }
+    }
+  ]
+}
 ```
 
-4. Start client
+### Sender data `data/sender.json`
+
+- Sender data will be stored in `data.json`.
+- When content server send request PUT, senderID will be stored in this file.
+- It will be used to check latest data and remove it if it's old data.
 
 ```
-make client
+{ "e4e4323f-45b7-46d9-8472-e9e348d35b8d": 1728013894190 }
 ```
 
-#### Run server and client without Makefile
+## Lamport Clock
 
-1. Start RMI Registry:
+Distributed weather data system implements Lamport logical clocks to maintain a partial ordering of events across multiple distributed components.
 
-```
-rmiregistry &
-```
+### Lamport
 
-2. Build file:
+It maintains an AtomicInteger to represent the current logical time.
 
-```
-javac -d . Calculator.java CalculatorImplementation.java CalculatorClient.java CalculatorServer.java
-```
+Provides methods to increment the clock (tick()), adjust the clock based on received timestamps (adjust()), and retrieve the current time (getTime()).
 
-3. Run server:
+### System Components
 
-```
-java -classpath . -Djava.rmi.server.codebase=file:./ CalculatorServer
-```
+### AggregationServer
 
-4. Run client:
+- Maintains a Lamport clock instance to timestamp all operations.
+- Updates its clock on every client interaction (GET or PUT requests).
+- Includes the current Lamport time in responses to clients, facilitating system-wide clock synchronization.
+- If one server is down, the MainAggregationServer will redirect request to another active AS, in that case, the Lamport clock will be reseted, I implemented the function `ensureClockConsistency` to synchronize Lamport clock and update it.
+- After 30s without updating content from Content Server, Aggregation Server will automatically remove data.
 
-```
-java  -classpath . CalculatorClient
-```
+### ContentServer
 
-### Project structure
+- Initializes its own Lamport clock upon startup.
+- Sends its current Lamport time with each PUT request to the AggregationServer.
+- Adjusts its clock based on the AggregationServer's response, ensuring it stays synchronized with the server.
+- Uses the Lamport time to version its weather data updates, allowing the server to order updates correctly.
+- If Content Server cannot connect to Aggregation Server, it will retry upload data in 3 times.
 
-#### 1. Calculator.java
+### Client (GETClient)
 
-Interface defining the calculator operations
+- Maintains a Lamport clock to track the logical time of its operations.
+- Sends its current Lamport time with each GET request.
+- Adjusts its clock based on the AggregationServer's response.
+- Uses the received Lamport time to understand the "age" of the received weather data in terms of logical time.
+- If Client Server cannot connect to Aggregation Server, it will retry upload data in 3 times.
 
-#### 2. CalculatorImplementation.java
+## Test Suite
 
-Function implementation:
+My test suite is designed to verify the functionality and robustness of a distributed weather data aggregation system. It tests various scenarios including normal operation, server failures, and data expiration. The test suite uses multiple aggregation servers, content servers, and clients to simulate a realistic distributed environment. It included unit tests and integration tests.
 
-- void pushValue(int val): used to push value onto the stack
-- void pushOperation(String operator): used to pop all value and push the result from operator (min, max, lcm, gcd)
-- int pop(): pop value from stack
-- boolean isEmpty(): check stack is empty or not
-- int delayPop(int millis): pop value after millis delayed
-- String displayStack(): print the stack in terminal (used for improving UX)
-- Calculator createCalculator(): create a new instance for operation, it will allow clients will have their own stack
+### 1. Unit test
 
-#### 3. CalculatorFactory.java
+Mostly testing functions in main class.
 
-Interface and implementation for the Calculator factory. Each client will create an instance from this to have their own stack.
+- DatabaseManagement_Test
+- AggregationServer_Test
+- JsonHandling_Test
+- ContentServer_Test
+- GETClient_Test
 
-#### 4. CalculatorServer.java
+### 2. Integration test
 
-Server that using the RMI registry
+Test Case Descriptions:
 
-#### 5. CalculatorClient.java
+- testMultipleContentServerUploads(): This test verifies that multiple content servers can successfully upload data to the aggregation system. It uploads data from two different content servers and then checks if clients can retrieve the correct data for each weather station.
 
-Client for interacting with the calculator
+- testReplicationServerFailover(): This test examines the system's fault tolerance. It uploads data, then shuts down one of the replication servers. It then verifies that the data is still accessible from the remaining servers, demonstrating the system's ability to handle server failures.
 
-When the client connects to server, the program will show a list of actions that client can select.
+- testNormalCase(): This test simulates a more complex normal operation scenario. It involves multiple data uploads from two content servers and subsequent data retrievals by two clients. It checks if the system correctly handles multiple updates and if clients can retrieve the most recent data for different weather stations.
 
-```
-Choose an action:
-1. Push Value
-2. Push Operation
-3. Pop
-4. Delay Pop
-5. Display current stack
-6. Quit
-Enter your choice (1-5): 1
-Enter value to push: 12
-Current stack: [12]
-```
+- test1ASServerDown(): Similar to the normal case, but it simulates a scenario where one aggregation server goes down after data has been uploaded. It verifies that the system continues to function correctly and serve accurate data even when one server is unavailable.
 
-#### 6. CalculatorTest.java
+- testServerDown(): This test checks the system's behavior when all aggregation servers are down. It attempts to upload data and retrieve it when no servers are available, verifying how the system handles and reports complete service unavailability.
 
-JUnit test cases for the calculator
-
-My test result:
+- testDataExpirationAfter30Seconds(): This test focuses on the data expiration policy. It uploads data, waits for more than 30 seconds, and then attempts to retrieve the data. It verifies that the system correctly removes data that hasn't been updated within the specified timeframe.
 
 ```
-Thanks for using JUnit! Support its development at https://junit.org/sponsoring
-
 ╷
 ├─ JUnit Jupiter ✔
-│  └─ CalculatorTest ✔
-│     ├─ testMultipleClients() ✔
-│     ├─ testGCD() ✔
-│     ├─ testLCM() ✔
-│     ├─ testMax() ✔
-│     ├─ testMin() ✔
-│     ├─ testPop() ✔
-│     ├─ testLCMWithLongStack() ✔
-│     ├─ testPushValue() ✔
-│     ├─ testWrongOperatorAction() ✔
-│     ├─ testDelayPop() ✔
-│     ├─ testGCDWithLongStack() ✔
-│     └─ testNegativeNumbers() ✔
+│  ├─ DatabaseManagement_Test ✔
+│  │  ├─ testData() ✔
+│  │  └─ testGetTime() ✔
+│  ├─ AggregationServer_Test ✔
+│  │  ├─ testServerShutdown() ✔
+│  │  ├─ testHandleGetRequestWithContent() ✔
+│  │  ├─ testHandleGetRequestWithoutData() ✔
+│  │  └─ testHandlePutRequest() ✔
+│  ├─ JsonHandling_Test ✔
+│  │  ├─ testReadNonExistentFile(Path) ✔
+│  │  ├─ testConvertJSON() ✔
+│  │  ├─ testConvertJSONToText() ✔
+│  │  ├─ testConvertTextToJsonInvalidInput() ✔
+│  │  ├─ testParseJSONObject() ✔
+│  │  ├─ testRead(Path) ✔
+│  │  ├─ testExtractJSONContent() ✔
+│  │  ├─ testConvertObject() ✔
+│  │  ├─ testPrettier() ✔
+│  │  └─ testConvertTextToJson() ✔
+│  ├─ ContentServer_Test ✔
+│  │  ├─ testRetryUpload() ✔
+│  │  ├─ testLoadWeatherData() ✔
+│  │  ├─ testUploadData() ✔
+│  │  ├─ testShutdown() ✔
+│  │  └─ testIsLoadFileSuccess() ✔
+│  ├─ TestIntegration_Test ✔
+│  │  ├─ testNormalCase() ✔
+│  │  ├─ testMultipleContentServerUploads() ✔
+│  │  ├─ test1ASServerDown() ✔
+│  │  ├─ testDataExpirationAfter30Seconds() 37027 ms ✔
+│  │  ├─ testServerDown() 13036 ms ✔
+│  │  └─ testReplicationServerFailover() ✔
+│  └─ GETClient_Test ✔
+│     ├─ testSendRequestNoContent() ✔
+│     ├─ testGetServerInfo() ✔
+│     ├─ testSendRequestServiceUnavailable() ✔
+│     ├─ testSendRequest() ✔
+│     └─ testGetServerInfoInvalid() ✔
 └─ JUnit Vintage ✔
 
-Test run finished after 3079 ms
-[         3 containers found      ]
+Test run finished after 69438 ms
+[         8 containers found      ]
 [         0 containers skipped    ]
-[         3 containers started    ]
+[         8 containers started    ]
 [         0 containers aborted    ]
-[         3 containers successful ]
+[         8 containers successful ]
 [         0 containers failed     ]
-[        12 tests found           ]
+[        32 tests found           ]
 [         0 tests skipped         ]
-[        12 tests started         ]
+[        32 tests started         ]
 [         0 tests aborted         ]
-[        12 tests successful      ]
+[        32 tests successful      ]
 [         0 tests failed          ]
 ```
 
-#### junit-platform-console-standalone-1.8.2.jar
+## Command
 
-JUnit library for running tests
+1. Compile all: `make all`
+
+2. Run test cases: `make test`
+
+3. Run main aggregation server: `make main`
+
+4. Run content server: `make contentserver`
+
+5. Run client: `make client`
